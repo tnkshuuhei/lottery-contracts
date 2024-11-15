@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-import {hevm} from "../IHevm.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {ILootery, Lootery} from "../../../contracts/Lootery.sol";
-import {MockRandomiser} from "../MockRandomiser.sol";
-import {MockERC20} from "../MockERC20.sol";
-import {TicketSVGRenderer} from "../../periphery/TicketSVGRenderer.sol";
-import {WETH9} from "../WETH9.sol";
-import {LooteryETHAdapter} from "../../periphery/LooteryETHAdapter.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import { hevm } from "../IHevm.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { ILootery, Lootery } from "../../../contracts/Lootery.sol";
+import { MockRandomiser } from "../MockRandomiser.sol";
+import { MockERC20 } from "../MockERC20.sol";
+import { TicketSVGRenderer } from "../../periphery/TicketSVGRenderer.sol";
+import { WETH9 } from "../WETH9.sol";
+import { LooteryETHAdapter } from "../../periphery/LooteryETHAdapter.sol";
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 contract EchidnaLootery {
     using Strings for uint256;
@@ -24,8 +24,7 @@ contract EchidnaLootery {
     uint256 internal lastGameId;
     address public feeRecipient;
 
-    mapping(uint256 gameId => uint256 unclaimedPayouts)
-        internal recUnclaimedPayouts;
+    mapping(uint256 gameId => uint256 unclaimedPayouts) internal recUnclaimedPayouts;
     mapping(uint256 gameId => uint256 jackpot) internal recJackpots;
     uint256 internal recTotalMinted;
 
@@ -60,25 +59,13 @@ contract EchidnaLootery {
         // Echidna senders should have enough tokens to buy tickets
         hevm.label(address(0x10000), "alice");
         prizeToken.mint(address(0x10000), 2 ** 128);
-        prizeToken.setApproval(
-            address(0x10000),
-            address(lootery),
-            type(uint256).max
-        );
+        prizeToken.setApproval(address(0x10000), address(lootery), type(uint256).max);
         hevm.label(address(0x20000), "bob");
         prizeToken.mint(address(0x20000), 2 ** 128);
-        prizeToken.setApproval(
-            address(0x20000),
-            address(lootery),
-            type(uint256).max
-        );
+        prizeToken.setApproval(address(0x20000), address(lootery), type(uint256).max);
         hevm.label(address(0x30000), "deployer");
         prizeToken.mint(address(0x30000), 2 ** 128);
-        prizeToken.setApproval(
-            address(0x30000),
-            address(lootery),
-            type(uint256).max
-        );
+        prizeToken.setApproval(address(0x30000), address(lootery), type(uint256).max);
     }
 
     function setFeeRecipient(address feeRecipient_) external {
@@ -115,15 +102,11 @@ contract EchidnaLootery {
 
         ILootery.Ticket[] memory tickets = new ILootery.Ticket[](numTickets);
         for (uint256 i = 0; i < numTickets; i++) {
-            lastTicketSeed = uint256(
-                keccak256(abi.encodePacked(lastTicketSeed))
-            );
+            lastTicketSeed = uint256(keccak256(abi.encodePacked(lastTicketSeed)));
             bool isEmptyPick = lastTicketSeed % 2 == 0;
             tickets[i] = ILootery.Ticket({
                 whomst: msg.sender,
-                pick: isEmptyPick
-                    ? new uint8[](0)
-                    : lootery.computeWinningPick(lastTicketSeed)
+                pick: isEmptyPick ? new uint8[](0) : lootery.computeWinningPick(lastTicketSeed)
             });
         }
         // TODO: fuzz beneficiaries
@@ -146,7 +129,7 @@ contract EchidnaLootery {
         /// Initial state /////////////////////////////////////////////////////
         (ILootery.GameState state0, uint256 gameId0) = lootery.currentGame();
         require(state0 == ILootery.GameState.Purchase, "Ignore path");
-        (uint64 ticketsSold0, uint64 startedAt0, ) = lootery.gameData(gameId0);
+        (uint64 ticketsSold0, uint64 startedAt0,) = lootery.gameData(gameId0);
         bool isApocalypseMode = lootery.isApocalypseMode();
         uint256 total0 = lootery.jackpot() + lootery.unclaimedPayouts();
         ///////////////////////////////////////////////////////////////////////
@@ -163,33 +146,20 @@ contract EchidnaLootery {
         (ILootery.GameState state1, uint256 gameId1) = lootery.currentGame();
         uint256 jackpot1 = lootery.jackpot();
         uint256 unclaimedPayouts1 = lootery.unclaimedPayouts();
-        assertWithMsg(
-            total0 == jackpot1 + unclaimedPayouts1,
-            "total paid/unpaid jackpot amounts not conserved"
-        );
+        assertWithMsg(total0 == jackpot1 + unclaimedPayouts1, "total paid/unpaid jackpot amounts not conserved");
         recJackpots[gameId1] = jackpot1;
         recUnclaimedPayouts[gameId1] = unclaimedPayouts1;
         if (ticketsSold0 == 0) {
             // No tickets -> skip draw
+            assertWithMsg(gameId1 > gameId0, "numTickets == 0: gameId did not increase");
             assertWithMsg(
-                gameId1 > gameId0,
-                "numTickets == 0: gameId did not increase"
-            );
-            assertWithMsg(
-                (state0 == state1) ||
-                    (isApocalypseMode && state1 == ILootery.GameState.Dead),
+                (state0 == state1) || (isApocalypseMode && state1 == ILootery.GameState.Dead),
                 "numTickets == 0: unexpected state"
             );
         } else {
             // Tickets -> VRF request
-            assertWithMsg(
-                gameId0 == gameId1,
-                "numTickets > 0: unexpected gameId increase"
-            );
-            assertWithMsg(
-                state1 == ILootery.GameState.DrawPending,
-                "numTickets > 0: unexpected state"
-            );
+            assertWithMsg(gameId0 == gameId1, "numTickets > 0: unexpected gameId increase");
+            assertWithMsg(state1 == ILootery.GameState.DrawPending, "numTickets > 0: unexpected state");
         }
     }
 
@@ -197,12 +167,9 @@ contract EchidnaLootery {
     function _fulfill(uint256 seed) internal {
         ///////////////////////////////////////////////////////////////////////
         /// Initial state /////////////////////////////////////////////////////
-        (ILootery.GameState state0, ) = lootery.currentGame();
-        (uint256 requestId0, ) = lootery.randomnessRequest();
-        require(
-            state0 == ILootery.GameState.DrawPending && requestId0 != 0,
-            "No pending draw"
-        );
+        (ILootery.GameState state0,) = lootery.currentGame();
+        (uint256 requestId0,) = lootery.randomnessRequest();
+        require(state0 == ILootery.GameState.DrawPending && requestId0 != 0, "No pending draw");
         uint256 total0 = lootery.jackpot() + lootery.unclaimedPayouts();
         ///////////////////////////////////////////////////////////////////////
 
@@ -222,16 +189,12 @@ contract EchidnaLootery {
         uint256 unclaimedPayouts1 = lootery.unclaimedPayouts();
         recJackpots[gameId1] = jackpot1;
         recUnclaimedPayouts[gameId1] = unclaimedPayouts1;
-        assertWithMsg(
-            total0 == jackpot1 + unclaimedPayouts1,
-            "total paid/unpaid jackpot amounts not conserved"
-        );
-        (uint256 requestId1, ) = lootery.randomnessRequest();
+        assertWithMsg(total0 == jackpot1 + unclaimedPayouts1, "total paid/unpaid jackpot amounts not conserved");
+        (uint256 requestId1,) = lootery.randomnessRequest();
         assertWithMsg(requestId1 == 0, "requestId should be 0");
         bool isApocalypseMode = lootery.isApocalypseMode();
         assertWithMsg(
-            state1 == ILootery.GameState.Purchase ||
-                (isApocalypseMode && state1 == ILootery.GameState.Dead),
+            state1 == ILootery.GameState.Purchase || (isApocalypseMode && state1 == ILootery.GameState.Dead),
             "unexpected state"
         );
     }
@@ -260,7 +223,7 @@ contract EchidnaLootery {
         address tokenOwner = lootery.ownerOf(tokenId);
         uint256 tokenOwnerBalance0 = prizeToken.balanceOf(tokenOwner);
         (uint256 gameId, uint256 pickId) = lootery.purchasedTickets(tokenId);
-        (, , uint256 winningPickId) = lootery.gameData(gameId);
+        (,, uint256 winningPickId) = lootery.gameData(gameId);
 
         lootery.claimWinnings(tokenId);
 
@@ -272,37 +235,27 @@ contract EchidnaLootery {
             // Winner takes jackpot regardless of state
             assert(numWinners > 0);
             uint256 minPrizeShare = recUnclaimedPayouts[gameId] / numWinners;
-            assertWithMsg(
-                tokenOwnerBalance1 - tokenOwnerBalance0 >= minPrizeShare,
-                "winner did not receive jackpot"
-            );
+            assertWithMsg(tokenOwnerBalance1 - tokenOwnerBalance0 >= minPrizeShare, "winner did not receive jackpot");
             assert(lootery.totalSupply() == totalSupply0);
         } else {
             if (numWinners == 0 && state == ILootery.GameState.Dead) {
                 // Apocalypse mode, no winner -> claim even share
-                uint256 minPrizeShare = recUnclaimedPayouts[gameId] /
-                    recTotalMinted;
+                uint256 minPrizeShare = recUnclaimedPayouts[gameId] / recTotalMinted;
                 assertWithMsg(
-                    tokenOwnerBalance1 - tokenOwnerBalance0 >= minPrizeShare,
-                    "consolation prize not received"
+                    tokenOwnerBalance1 - tokenOwnerBalance0 >= minPrizeShare, "consolation prize not received"
                 );
 
                 // Claiming consolation prize should burn the token
                 bool isBurnt;
-                try lootery.ownerOf(tokenId) {} catch {
+                try lootery.ownerOf(tokenId) { }
+                catch {
                     isBurnt = true;
                 }
-                assertWithMsg(
-                    isBurnt,
-                    "tokenId not burnt after claiming consolation prize"
-                );
+                assertWithMsg(isBurnt, "tokenId not burnt after claiming consolation prize");
                 assert(lootery.totalSupply() == totalSupply0 - 1);
             } else {
                 // Receive nothing
-                assertWithMsg(
-                    tokenOwnerBalance1 == tokenOwnerBalance0,
-                    "no prize"
-                );
+                assertWithMsg(tokenOwnerBalance1 == tokenOwnerBalance0, "no prize");
                 assert(lootery.totalSupply() == totalSupply0);
             }
         }
@@ -337,31 +290,22 @@ contract EchidnaLootery {
     function test_numWinnersLteTicketsSold() external {
         (, uint256 gameId) = lootery.currentGame();
         require(gameId > 0, "No games played yet");
-        (uint64 ticketsSold, , uint256 winningPickId) = lootery.gameData(
-            gameId - 1
-        );
-        assertWithMsg(
-            lootery.numWinnersInGame(gameId - 1, winningPickId) <= ticketsSold,
-            "numWinners > ticketsSold"
-        );
+        (uint64 ticketsSold,, uint256 winningPickId) = lootery.gameData(gameId - 1);
+        assertWithMsg(lootery.numWinnersInGame(gameId - 1, winningPickId) <= ticketsSold, "numWinners > ticketsSold");
     }
 
     function test_alwaysBacked() external view {
         assert(
-            prizeToken.balanceOf(address(lootery)) >=
-                (lootery.unclaimedPayouts() +
-                    lootery.jackpot() +
-                    lootery.accruedCommunityFees())
+            prizeToken.balanceOf(address(lootery))
+                >= (lootery.unclaimedPayouts() + lootery.jackpot() + lootery.accruedCommunityFees())
         );
     }
 
     function test_requestOnlyDefinedWhenDrawPending() external view {
-        (ILootery.GameState state, ) = lootery.currentGame();
-        (uint256 requestId, ) = lootery.randomnessRequest();
-        bool isDrawPending = state == ILootery.GameState.DrawPending &&
-            requestId != 0;
-        bool isOtherState = state != ILootery.GameState.DrawPending &&
-            requestId == 0;
+        (ILootery.GameState state,) = lootery.currentGame();
+        (uint256 requestId,) = lootery.randomnessRequest();
+        bool isDrawPending = state == ILootery.GameState.DrawPending && requestId != 0;
+        bool isOtherState = state != ILootery.GameState.DrawPending && requestId == 0;
         assert(isDrawPending || isOtherState);
     }
 }

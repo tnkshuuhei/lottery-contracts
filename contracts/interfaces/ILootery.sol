@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8;
 
-import {ITypeAndVersion} from "./ITypeAndVersion.sol";
-import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import {IRandomiserCallback} from "./IRandomiserCallback.sol";
+import { ITypeAndVersion } from "./ITypeAndVersion.sol";
+import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import { IRandomiserCallback } from "./IRandomiserCallback.sol";
 
 /// @title ILootery
 /// @custom:version 1.3.0
@@ -79,31 +79,12 @@ interface ILootery is ITypeAndVersion, IRandomiserCallback, IERC721 {
         uint48 timestamp;
     }
 
-    event TicketPurchased(
-        uint256 indexed gameId,
-        address indexed whomst,
-        uint256 indexed tokenId,
-        uint8[] pick
-    );
-    event BeneficiaryPaid(
-        uint256 indexed gameId,
-        address indexed beneficiary,
-        uint256 value
-    );
+    event TicketPurchased(uint256 indexed gameId, address indexed whomst, uint256 indexed tokenId, uint8[] pick);
+    event BeneficiaryPaid(uint256 indexed gameId, address indexed beneficiary, uint256 value);
     event GameFinalised(uint256 gameId, uint8[] winningPick);
     event Transferred(address to, uint256 value);
-    event WinningsClaimed(
-        uint256 indexed tokenId,
-        uint256 indexed gameId,
-        address whomst,
-        uint256 value
-    );
-    event ConsolationClaimed(
-        uint256 indexed tokenId,
-        uint256 indexed gameId,
-        address whomst,
-        uint256 value
-    );
+    event WinningsClaimed(uint256 indexed tokenId, uint256 indexed gameId, address whomst, uint256 value);
+    event ConsolationClaimed(uint256 indexed tokenId, uint256 indexed gameId, address whomst, uint256 value);
     event DrawSkipped(uint256 indexed gameId);
     event RandomnessRequested(uint208 requestId);
     event Received(address sender, uint256 amount);

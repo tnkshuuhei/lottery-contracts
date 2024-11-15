@@ -23,9 +23,19 @@ contract MockRandomiser is IAnyrand, Ownable {
      * Requests randomness
      */
     function requestRandomness(
-        uint256 /** deadline */,
-        uint256 /**callbackGasLimit */
-    ) external payable returns (uint256) {
+        uint256,
+        /**
+         * deadline
+         */
+        uint256
+    )
+        /**
+         * callbackGasLimit
+         */
+        external
+        payable
+        returns (uint256)
+    {
         uint256 requestId = nextRequestId++;
         requestIdToCallbackMap[requestId] = msg.sender;
         return requestId;
@@ -34,17 +44,11 @@ contract MockRandomiser is IAnyrand, Ownable {
     /**
      * Callback function used by VRF Coordinator (V2)
      */
-    function fulfillRandomWords(
-        uint256 requestId,
-        uint256[] calldata randomWords
-    ) external {
+    function fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) external {
         address callbackContract = requestIdToCallbackMap[requestId];
         require(callbackContract != address(0), "Request ID doesn't exist");
         delete requestIdToCallbackMap[requestId];
-        IRandomiserCallback(callbackContract).receiveRandomWords(
-            requestId,
-            randomWords
-        );
+        IRandomiserCallback(callbackContract).receiveRandomWords(requestId, randomWords);
     }
 
     function setNextRequestId(uint256 reqId) external {

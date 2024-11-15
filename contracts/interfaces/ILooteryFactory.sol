@@ -1,33 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-import {ITypeAndVersion} from "./ITypeAndVersion.sol";
+import { ITypeAndVersion } from "./ITypeAndVersion.sol";
 
 /// @title ILooteryFactory
 /// @custom:version 1.2.0
 /// @notice Launch a lotto to support your charity or public good.
 interface ILooteryFactory is ITypeAndVersion {
     event LooteryLaunched(
-        address indexed looteryProxy,
-        address indexed looteryImplementation,
-        address indexed deployer,
-        string name
+        address indexed looteryProxy, address indexed looteryImplementation, address indexed deployer, string name
     );
-    event LooteryMasterCopyUpdated(
-        address oldLooteryMasterCopy,
-        address newLooteryMasterCopy
-    );
+    event LooteryMasterCopyUpdated(address oldLooteryMasterCopy, address newLooteryMasterCopy);
     event RandomiserUpdated(address oldRandomiser, address newRandomiser);
-    event TicketSVGRendererUpdated(
-        address oldTicketSVGRenderer,
-        address newTicketSVGRenderer
-    );
+    event TicketSVGRendererUpdated(address oldTicketSVGRenderer, address newTicketSVGRenderer);
 
-    function init(
-        address looteryMasterCopy,
-        address randomiser,
-        address ticketSVGRenderer
-    ) external;
+    function init(address looteryMasterCopy, address randomiser, address ticketSVGRenderer) external;
 
     function setLooteryMasterCopy(address looteryMasterCopy) external;
 
@@ -58,5 +45,7 @@ interface ILooteryFactory is ITypeAndVersion {
         address prizeToken,
         uint256 seedJackpotDelay,
         uint256 seedJackpotMinValue
-    ) external returns (address);
+    )
+        external
+        returns (address);
 }

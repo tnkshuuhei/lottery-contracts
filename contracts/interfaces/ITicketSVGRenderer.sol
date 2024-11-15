@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8;
 
-import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 interface ITicketSVGRenderer is IERC165 {
     error EmptyPicks();
@@ -12,11 +12,7 @@ interface ITicketSVGRenderer is IERC165 {
     /// @param name Name/title of the ticket
     /// @param pick Picks must be sorted ascendingly
     /// @param maxPick Maximum pick number
-    function renderSVG(
-        string memory name,
-        uint8 maxPick,
-        uint8[] memory pick
-    ) external view returns (string memory);
+    function renderSVG(string memory name, uint8 maxPick, uint8[] memory pick) external view returns (string memory);
 
     /// @notice Render Base64-encoded JSON metadata
     /// @param name Name/title of the ticket
@@ -27,5 +23,8 @@ interface ITicketSVGRenderer is IERC165 {
         uint256 tokenId,
         uint8 maxPick,
         uint8[] memory pick
-    ) external view returns (string memory);
+    )
+        external
+        view
+        returns (string memory);
 }

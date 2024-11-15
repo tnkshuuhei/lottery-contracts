@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8;
 
-import {Lootery} from "../Lootery.sol";
+import { Lootery } from "../Lootery.sol";
 
 contract LooteryHarness is Lootery {
     function pickTickets(Ticket[] calldata tickets) external {

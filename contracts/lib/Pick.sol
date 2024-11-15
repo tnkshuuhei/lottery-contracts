@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {FeistelShuffleOptimised} from "solshuffle/contracts/FeistelShuffleOptimised.sol";
-import {Sort} from "./Sort.sol";
+import { FeistelShuffleOptimised } from "solshuffle/contracts/FeistelShuffleOptimised.sol";
+import { Sort } from "./Sort.sol";
 
 library Pick {
     using Sort for uint8[];
@@ -22,10 +22,7 @@ library Pick {
     /// @notice Pick bitvector => pick array
     /// @param pickLength Number of elements in the pick array
     /// @param pickId Bitvector representing the pick
-    function parse(
-        uint8 pickLength,
-        uint256 pickId
-    ) internal pure returns (uint8[] memory pick) {
+    function parse(uint8 pickLength, uint256 pickId) internal pure returns (uint8[] memory pick) {
         pick = new uint8[](pickLength);
         uint256 p;
         for (uint256 i; i < 256; ++i) {
@@ -46,18 +43,14 @@ library Pick {
         uint8 pickLength,
         uint8 maxBallValue,
         uint256 randomSeed
-    ) internal pure returns (uint8[] memory balls) {
+    )
+        internal
+        pure
+        returns (uint8[] memory balls)
+    {
         balls = new uint8[](pickLength);
         for (uint256 i; i < pickLength; ++i) {
-            balls[i] = uint8(
-                1 +
-                    FeistelShuffleOptimised.shuffle(
-                        i,
-                        maxBallValue,
-                        randomSeed,
-                        12
-                    )
-            );
+            balls[i] = uint8(1 + FeistelShuffleOptimised.shuffle(i, maxBallValue, randomSeed, 12));
         }
         balls = balls.sort();
     }

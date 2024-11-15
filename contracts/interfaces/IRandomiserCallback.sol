@@ -8,8 +8,5 @@ interface IRandomiserCallback {
     ///     requestId should be as expected from the randomness request.
     /// @param requestId The identifier for the original randomness request
     /// @param randomWords An arbitrary array of random numbers
-    function receiveRandomWords(
-        uint256 requestId,
-        uint256[] calldata randomWords
-    ) external;
+    function receiveRandomWords(uint256 requestId, uint256[] calldata randomWords) external;
 }

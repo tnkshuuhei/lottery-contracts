@@ -5,9 +5,7 @@ interface IAnyrand {
     /// @notice Compute the total request price
     /// @param callbackGasLimit The callback gas limit that will be used for
     ///     the randomness request
-    function getRequestPrice(
-        uint256 callbackGasLimit
-    ) external view returns (uint256);
+    function getRequestPrice(uint256 callbackGasLimit) external view returns (uint256);
 
     /// @notice Request randomness
     /// @param deadline Timestamp of when the randomness should be fulfilled. A
@@ -15,8 +13,5 @@ interface IAnyrand {
     ///     future round) will be used as the round from which to derive
     ///     randomness.
     /// @param callbackGasLimit Gas limit for callback
-    function requestRandomness(
-        uint256 deadline,
-        uint256 callbackGasLimit
-    ) external payable returns (uint256);
+    function requestRandomness(uint256 deadline, uint256 callbackGasLimit) external payable returns (uint256);
 }
