@@ -1,20 +1,22 @@
+.DS_Store
+
 node_modules
 .env
+!.env.example
+coverage
+coverage.json
+typechain
+typechain-types
+yarn-error.log
 
 # Hardhat files
-/cache
-/artifacts
+cache
+artifacts
+!ignition/**/*
 
-# TypeChain files
-/typechain
-/typechain-types
+# Echidna
+crytic-export
+corpus
 
-# solidity-coverage files
-/coverage
-/coverage.json
-
-# Hardhat Ignition default folder for deployments against a local node
-ignition/deployments/chain-31337
-
-# foundry file
+# Foundry files
 out
