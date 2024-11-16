@@ -19,6 +19,7 @@ import { CCIPReceiver } from "@chainlink/contracts-ccip/src/v0.8/ccip/applicatio
 import { Client } from "@chainlink/contracts-ccip/src/v0.8/ccip/libraries/Client.sol";
 import { IRouterClient } from "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
 import { OwnerIsCreator } from "@chainlink/contracts-ccip/src/v0.8/shared/access/OwnerIsCreator.sol";
+import { IReciever } from "./ccip/IReciever.sol";
 
 /// @title Lootery
 /// @notice Lootery is a number lottery contract where players can pick a
@@ -45,7 +46,7 @@ import { OwnerIsCreator } from "@chainlink/contracts-ccip/src/v0.8/shared/access
 ///
 ///     While the jackpot builds up over time, it is possible (and desirable)
 ///     to seed the jackpot at any time using the `seedJackpot` function.
-contract Lootery is ILootery, ERC721, ReentrancyGuard, CCIPReceiver, OwnerIsCreator {
+contract Lootery is ILootery, ERC721, ReentrancyGuard, CCIPReceiver, OwnerIsCreator, IReciever {
     using SafeERC20 for IERC20;
     using Strings for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -714,38 +715,6 @@ contract Lootery is ILootery, ERC721, ReentrancyGuard, CCIPReceiver, OwnerIsCrea
         return previousOwner;
     }
 
-    // The chain selector of the destination chain.
-    // The address of the receiver on the destination chain.
-    // The borrower's EOA - would map to a depositor on the source chain.
-    // The token amount that was sent.
-    // The fees paid for sending the message.
-    event MessageSent( // The unique ID of the message.
-        bytes32 indexed messageId,
-        uint64 indexed destinationChainSelector,
-        address receiver,
-        address borrower,
-        Client.EVMTokenAmount tokenAmount,
-        uint256 fees
-    );
-
-    // Event emitted when a message is received from another chain.
-    event MessageReceived(
-        bytes32 indexed messageId,
-        uint64 indexed sourceChainSelector,
-        address sender,
-        Client.EVMTokenAmount tokenAmount,
-        bytes encodedTicket
-    );
-
-    // Struct to hold details of a message.
-    struct MessageIn {
-        uint64 sourceChainSelector; // The chain selector of the source chain.
-        address sender; // The address of the sender.
-        address token; // received token.
-        uint256 amount; // received amount.
-        bytes encodedTicket; // encoded ticket
-    }
-
     // Storage variables.
     bytes32[] public receivedMessages; // Array to keep track of the IDs of received messages.
     mapping(bytes32 => MessageIn) public messageDetail; // Mapping from message ID to MessageIn struct, storing details
@@ -771,6 +740,8 @@ contract Lootery is ILootery, ERC721, ReentrancyGuard, CCIPReceiver, OwnerIsCrea
         messageDetail[messageId] = detail;
 
         emit MessageReceived(messageId, sourceChainSelector, sender, tokenAmounts[0], encodedTicket);
+
+        jackpot += amount;
 
         // mint ticket
         _pickTickets(tickets);

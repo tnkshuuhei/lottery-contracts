@@ -9,6 +9,7 @@ ast = true
 build_info = true
 extra_output = ["storageLayout"]
 fs_permissions = [{ access = "read", path = "out" }]
+via-IR = true
 
 [etherscan]
   arbitrum = { key = "${API_KEY_ARBISCAN}" }
