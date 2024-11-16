@@ -158,8 +158,5 @@ interface ILootery is ITypeAndVersion, IERC721 {
     error INVALID_KEY_HASH(bytes32 keyHash);
     error INVALID_SUBSCRIPTION_ID(uint256 subscriptionId);
 
-    /// @notice Initialises the contract instance
-    function initialize(InitConfig memory initConfig) external;
-
     function receiveRandomWords(uint256[] calldata _randomWords) external;
 }

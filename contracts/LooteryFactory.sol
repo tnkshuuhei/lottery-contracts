@@ -158,7 +158,7 @@ contract LooteryFactory is ILooteryFactory, UUPSUpgradeable, AccessControlUpgrad
         address looteryMasterCopy = LOOTERY_MASTER_COPY_SLOT.getAddressSlot().value;
         // Deploy & init proxy
         address payable looteryProxy = payable(Clones.cloneDeterministic(looteryMasterCopy, salt));
-        ILootery(looteryProxy).initialize(config);
+        // ILootery(looteryProxy).initialize(config);
         emit LooteryLaunched(looteryProxy, looteryMasterCopy, msg.sender, config.name);
         return looteryProxy;
     }

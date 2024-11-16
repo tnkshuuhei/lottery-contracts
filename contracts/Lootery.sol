@@ -3,11 +3,10 @@ pragma solidity 0.8.27;
 
 import { ILootery } from "./interfaces/ILootery.sol";
 import { Pick } from "./lib/Pick.sol";
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -42,7 +41,7 @@ import { IRandomNumber } from "./ccip/IRandomNumber.sol";
 ///
 ///     While the jackpot builds up over time, it is possible (and desirable)
 ///     to seed the jackpot at any time using the `seedJackpot` function.
-contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeable, ReentrancyGuardUpgradeable {
+contract Lootery is ILootery, Ownable, ERC721, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using Strings for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -122,35 +121,7 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
     // VRF mapping
     mapping(uint256 => RequestStatus) public s_requests; /* requestId --> requestStatus */
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
-
-    function typeAndVersion() external pure returns (string memory) {
-        return "Lootery 1.8.0";
-    }
-
-    /// @dev The contract should be able to receive Ether to pay for VRF.
-    receive() external payable {
-        emit Received(msg.sender, msg.value);
-    }
-
-    /// @notice Only allow calls in the specified game state
-    /// @param state Required game state
-    modifier onlyInState(GameState state) {
-        if (currentGame.state != state) {
-            revert UnexpectedState(currentGame.state);
-        }
-        _;
-    }
-
-    /// @notice Initialisoooooooor
-    function initialize(InitConfig memory initConfig) public initializer {
-        __Ownable_init(initConfig.owner);
-        __ERC721_init(initConfig.name, initConfig.symbol);
-        __ReentrancyGuard_init();
-
+    constructor(InitConfig memory initConfig) Ownable(initConfig.owner) ERC721(initConfig.name, initConfig.symbol) {
         // deploy RandomNumber contract
         vrf = IRandomNumber(address(new RandomNumber(initConfig.subscriptionId, initConfig.keyHash, address(this))));
 
@@ -217,6 +188,97 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
             winningPickId: 0
         });
     }
+
+    function typeAndVersion() external pure returns (string memory) {
+        return "Lootery 1.8.0";
+    }
+
+    /// @dev The contract should be able to receive Ether to pay for VRF.
+    receive() external payable {
+        emit Received(msg.sender, msg.value);
+    }
+
+    /// @notice Only allow calls in the specified game state
+    /// @param state Required game state
+    modifier onlyInState(GameState state) {
+        if (currentGame.state != state) {
+            revert UnexpectedState(currentGame.state);
+        }
+        _;
+    }
+
+    // /// @notice Initialisoooooooor
+    // function initialize(InitConfig memory initConfig) public initializer {
+    //     __Ownable_init(initConfig.owner);
+    //     __ERC721_init(initConfig.name, initConfig.symbol);
+    //     __ReentrancyGuard_init();
+
+    //     // deploy RandomNumber contract
+    //     vrf = IRandomNumber(address(new RandomNumber(initConfig.subscriptionId, initConfig.keyHash, address(this))));
+
+    //     require(initConfig.subscriptionId != 0, INVALID_SUBSCRIPTION_ID(initConfig.subscriptionId));
+    //     s_subscriptionId = initConfig.subscriptionId;
+
+    //     require(initConfig.keyHash.length != 0, INVALID_KEY_HASH(initConfig.keyHash));
+    //     keyHash = initConfig.keyHash;
+
+    //     // Pick length of 0 doesn't make sense, pick length > 32 would consume
+    //     // too much gas. Also realistically, lottos usually pick 5-8 numbers.
+    //     if (initConfig.pickLength == 0 || initConfig.pickLength > 32) {
+    //         revert InvalidPickLength(initConfig.pickLength);
+    //     }
+    //     pickLength = initConfig.pickLength;
+
+    //     // If pick length > max ball value, then it's impossible to even
+    //     // purchase tickets. This is a configuration error.
+    //     if (initConfig.pickLength > initConfig.maxBallValue) {
+    //         revert InvalidMaxBallValue(initConfig.maxBallValue);
+    //     }
+    //     maxBallValue = initConfig.maxBallValue;
+
+    //     if (initConfig.gamePeriod < 10 minutes) {
+    //         revert InvalidGamePeriod(initConfig.gamePeriod);
+    //     }
+    //     gamePeriod = initConfig.gamePeriod;
+
+    //     if (initConfig.ticketPrice == 0) {
+    //         revert InvalidTicketPrice(initConfig.ticketPrice);
+    //     }
+    //     ticketPrice = initConfig.ticketPrice;
+
+    //     // Community fee + protocol fee should not overflow 100%
+    //     // 0% jackpot fee share is allowed
+    //     if (initConfig.communityFeeBps + PROTOCOL_FEE_BPS > 1e4) {
+    //         revert InvalidFeeShares();
+    //     }
+    //     communityFeeBps = initConfig.communityFeeBps;
+
+    //     // if (initConfig.randomiser == address(0)) {
+    //     //     revert InvalidRandomiser(initConfig.randomiser);
+    //     // }
+    //     // randomiser = initConfig.randomiser;
+
+    //     if (initConfig.prizeToken == address(0)) {
+    //         revert InvalidPrizeToken(initConfig.prizeToken);
+    //     }
+    //     prizeToken = initConfig.prizeToken;
+
+    //     seedJackpotDelay = initConfig.seedJackpotDelay;
+    //     seedJackpotMinValue = initConfig.seedJackpotMinValue;
+    //     if (seedJackpotDelay == 0 || seedJackpotMinValue == 0) {
+    //         revert InvalidSeedJackpotConfig(seedJackpotDelay, seedJackpotMinValue);
+    //     }
+
+    //     _setTicketSVGRenderer(initConfig.ticketSVGRenderer);
+
+    //     currentGame.state = GameState.Purchase;
+    //     gameData[0] = Game({
+    //         ticketsSold: 0,
+    //         // The first game starts straight away
+    //         startedAt: uint64(block.timestamp),
+    //         winningPickId: 0
+    //     });
+    // }
 
     /// @notice Get all beneficiaries (shouldn't be such a huge list)
     function beneficiaries() external view returns (address[] memory addresses, string[] memory names) {

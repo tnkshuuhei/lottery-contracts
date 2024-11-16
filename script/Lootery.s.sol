@@ -39,9 +39,11 @@ contract DeployLootery is Script {
             ticketSVGRenderer: ticketSVGRenderer
         });
 
-        address proxy =
-            Upgrades.deployTransparentProxy("Lootery.sol", admin, abi.encodeCall(Lootery.initialize, (config)));
-        console.log("Deployed Lootery at", proxy);
+        // address proxy =
+        //     Upgrades.deployTransparentProxy("Lootery.sol", admin, abi.encodeCall(Lootery.initialize, (config)));
+
+				Lootery lootery = new Lootery(config);
+        console.log("Deployed Lootery at", address(lootery));
         vm.stopBroadcast();
     }
 }
