@@ -1,6 +1,8 @@
 @openzeppelin/contracts/=lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/
 @openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
 forge-std/=lib/forge-std/src/
-chainlink/=lib/chainlink-brownie-contracts/contracts/src/
-@chainlink/=lib/chainlink-brownie-contracts/contracts/src/
+chainlink-vrf/=lib/chainlink-brownie-contracts/contracts/src/
+@chainlink-vrf/=lib/chainlink-brownie-contracts/contracts/src/
 solshuffle/=lib/solshuffle/
+@chainlink-ccip/local/=lib/chainlink-local/
+chainlink-ccip/local/=lib/chainlink-local/
