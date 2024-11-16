@@ -14,10 +14,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { IAnyrand } from "./interfaces/IAnyrand.sol";
 import { ITicketSVGRenderer } from "./interfaces/ITicketSVGRenderer.sol";
-import { ILooteryFactory } from "./interfaces/ILooteryFactory.sol";
 import { RandomNumber } from "./periphery/RandomNumber.sol";
-// import { VRFConsumerBaseV2Plus } from "@chainlink/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
-// import { VRFV2PlusClient } from "@chainlink/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
 /// @title Lootery
 /// @notice Lootery is a number lottery contract where players can pick a
@@ -52,8 +49,6 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
     /// @notice The protocol fee, taken from purchase fee, if switched on
     uint256 public constant PROTOCOL_FEE_BPS = 500;
 
-    /// @notice The factory that gave birth to this lootery contract
-    address public factory;
     /// @notice How many numbers must be picked per draw (and per ticket)
     ///     The range of this number should be something like 3-7
     uint8 public pickLength;
@@ -165,8 +160,6 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
 
         require(initConfig.keyHash.length != 0, INVALID_KEY_HASH(initConfig.keyHash));
         keyHash = initConfig.keyHash;
-
-        factory = msg.sender;
 
         // Pick length of 0 doesn't make sense, pick length > 32 would consume
         // too much gas. Also realistically, lottos usually pick 5-8 numbers.
@@ -361,7 +354,8 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
 
         // Handle fee splits
         uint256 communityFeeShare = (totalPrice * communityFeeBps) / 1e4;
-        address protocolFeeRecipient = ILooteryFactory(factory).getFeeRecipient();
+        // address protocolFeeRecipient = ILooteryFactory(factory).getFeeRecipient();
+        address protocolFeeRecipient = beneficiary;
         uint256 protocolFeeShare = protocolFeeRecipient == address(0) ? 0 : (totalPrice * PROTOCOL_FEE_BPS) / 1e4;
         uint256 jackpotShare = totalPrice - communityFeeShare - protocolFeeShare;
         uint256 currentGameId = currentGame.id;
