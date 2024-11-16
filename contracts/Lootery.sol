@@ -14,8 +14,8 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { IAnyrand } from "./interfaces/IAnyrand.sol";
 import { ITicketSVGRenderer } from "./interfaces/ITicketSVGRenderer.sol";
-import { RandomNumber } from "./periphery/RandomNumber.sol";
-import { IRandomNumber } from "./interfaces/IRandomNumber.sol";
+import { RandomNumber } from "./ccip/RandomNumber.sol";
+import { IRandomNumber } from "./ccip/IRandomNumber.sol";
 
 /// @title Lootery
 /// @notice Lootery is a number lottery contract where players can pick a
