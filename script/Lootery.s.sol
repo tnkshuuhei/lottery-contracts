@@ -28,7 +28,7 @@ contract DeployLootery is Script {
             symbol: "ETHBKK",
             pickLength: 5,
             maxBallValue: 36,
-            gamePeriod: 30 minutes,
+            gamePeriod: 10 minutes,
             ticketPrice: 1 * 10 ** 6,
             communityFeeBps: 0.5e4,
             subscriptionId: subscriptionId,

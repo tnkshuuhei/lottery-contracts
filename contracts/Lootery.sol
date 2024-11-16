@@ -153,7 +153,8 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
         __ReentrancyGuard_init();
 
         // deploy RandomNumber contract
-        new RandomNumber(initConfig.subscriptionId, initConfig.keyHash, address(this));
+        vrf = new RandomNumber(initConfig.subscriptionId, initConfig.keyHash, address(this));
+
         require(initConfig.subscriptionId != 0, INVALID_SUBSCRIPTION_ID(initConfig.subscriptionId));
         s_subscriptionId = initConfig.subscriptionId;
 
@@ -390,7 +391,7 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
 
     /// @notice Draw numbers, picking potential jackpot winners and ending the
     ///     current game. This should be automated by a keeper.
-    function draw() external payable onlyInState(GameState.Purchase) {
+    function draw() external  onlyInState(GameState.Purchase) {
         Game memory game = gameData[currentGame.id];
         // Assert that the game is actually over
         uint256 gameDeadline = (game.startedAt + gamePeriod);

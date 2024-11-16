@@ -18,7 +18,7 @@ interface ILootery is ITypeAndVersion, IERC721 {
         uint256 gamePeriod;
         uint256 ticketPrice;
         uint256 communityFeeBps;
-        // address randomiser;
+        // address vrf;
         uint256 subscriptionId;
         bytes32 keyHash;
         address prizeToken;
