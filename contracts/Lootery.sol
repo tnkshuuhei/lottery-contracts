@@ -391,7 +391,7 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
 
     /// @notice Draw numbers, picking potential jackpot winners and ending the
     ///     current game. This should be automated by a keeper.
-    function draw() external  onlyInState(GameState.Purchase) {
+    function draw() external onlyInState(GameState.Purchase) {
         Game memory game = gameData[currentGame.id];
         // Assert that the game is actually over
         uint256 gameDeadline = (game.startedAt + gamePeriod);
@@ -456,9 +456,6 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
         // VRF call to trusted coordinator
         // slither-disable-next-line reentrancy-eth,arbitrary-send-eth
         requestId = vrf.requestRandomWords(false);
-        if (requestId > type(uint208).max) {
-            revert RequestIdOverflow(requestId);
-        }
         s_requests[requestId] = RequestStatus({ randomWords: new uint256[](0), exists: true, fulfilled: false });
         requestIds.push(requestId);
         lastRequestId = requestId;
