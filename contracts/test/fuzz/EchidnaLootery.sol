@@ -35,7 +35,7 @@ contract EchidnaLootery {
         ERC1967Proxy proxy = new ERC1967Proxy(
             address(new Lootery()),
             abi.encodeWithSelector(
-                Lootery.init.selector,
+                Lootery.initialize.selector,
                 ILootery.InitConfig({
                     owner: owner,
                     name: "Lootery Test",

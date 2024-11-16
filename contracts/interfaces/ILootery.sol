@@ -157,7 +157,7 @@ interface ILootery is ITypeAndVersion, IERC721 {
     error INVALID_SUBSCRIPTION_ID(uint256 subscriptionId);
 
     /// @notice Initialises the contract instance
-    function init(InitConfig memory initConfig) external;
+    function initialize(InitConfig memory initConfig) external;
 
     function receiveRandomWords(uint256[] calldata _randomWords) external;
 }

@@ -41,7 +41,14 @@ import { RandomNumber } from "./periphery/RandomNumber.sol";
 ///
 ///     While the jackpot builds up over time, it is possible (and desirable)
 ///     to seed the jackpot at any time using the `seedJackpot` function.
-contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeable, ReentrancyGuardUpgradeable {
+contract Lootery is
+    Initializable,
+    ILootery,
+    OwnableUpgradeable,
+    
+    ERC721Upgradeable,
+    ReentrancyGuardUpgradeable
+{
     using SafeERC20 for IERC20;
     using Strings for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -88,8 +95,6 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
     uint256[] public requestIds;
     uint256 public lastRequestId;
     bytes32 public keyHash;
-    uint16 public requestConfirmations = 3;
-    uint32 public numWords = 2;
 
     RandomNumber public vrf;
 
@@ -125,6 +130,7 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
     // VRF mapping
     mapping(uint256 => RequestStatus) public s_requests; /* requestId --> requestStatus */
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
@@ -148,7 +154,7 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
     }
 
     /// @notice Initialisoooooooor
-    function init(InitConfig memory initConfig) public override initializer {
+    function initialize(InitConfig memory initConfig) public initializer {
         __Ownable_init(initConfig.owner);
         __ERC721_init(initConfig.name, initConfig.symbol);
         __ReentrancyGuard_init();
@@ -220,6 +226,8 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
             winningPickId: 0
         });
     }
+
+    
 
     /// @notice Get all beneficiaries (shouldn't be such a huge list)
     function beneficiaries() external view returns (address[] memory addresses, string[] memory names) {
@@ -462,7 +470,7 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
         s_requests[requestId] = RequestStatus({ randomWords: new uint256[](0), exists: true, fulfilled: false });
         requestIds.push(requestId);
         lastRequestId = requestId;
-        emit RequestSent(requestId, numWords);
+        emit RequestSent(requestId, 2);
         return requestId;
     }
 
