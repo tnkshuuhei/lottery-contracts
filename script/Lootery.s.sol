@@ -29,7 +29,7 @@ contract DeployLootery is Script {
             pickLength: 5,
             maxBallValue: 36,
             gamePeriod: 30 minutes,
-            ticketPrice: 0.0001 ether,
+            ticketPrice: 1 * 10 ** 6,
             communityFeeBps: 0.5e4,
             subscriptionId: subscriptionId,
             keyHash: keyhash,

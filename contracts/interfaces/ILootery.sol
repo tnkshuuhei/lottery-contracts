@@ -114,6 +114,8 @@ interface ILootery is ITypeAndVersion, IERC721 {
     event TicketSVGRendererSet(address indexed renderer);
     event ApocalypseModeActivated(uint256 indexed gameId);
 
+    event TicketPriceUpdated(uint256 newPrice);
+
     // VRF events
     event RequestSent(uint256 requestId, uint32 numWords);
     event RequestFulfilled(uint256 requestId, uint256[] randomWords);

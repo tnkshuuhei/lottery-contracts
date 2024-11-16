@@ -41,14 +41,7 @@ import { RandomNumber } from "./periphery/RandomNumber.sol";
 ///
 ///     While the jackpot builds up over time, it is possible (and desirable)
 ///     to seed the jackpot at any time using the `seedJackpot` function.
-contract Lootery is
-    Initializable,
-    ILootery,
-    OwnableUpgradeable,
-    
-    ERC721Upgradeable,
-    ReentrancyGuardUpgradeable
-{
+contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
     using Strings for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -226,8 +219,6 @@ contract Lootery is
             winningPickId: 0
         });
     }
-
-    
 
     /// @notice Get all beneficiaries (shouldn't be such a huge list)
     function beneficiaries() external view returns (address[] memory addresses, string[] memory names) {
@@ -677,6 +668,12 @@ contract Lootery is
     /// @return balls Ordered set of winning numbers
     function computeWinningPick(uint256 randomSeed) public view returns (uint8[] memory balls) {
         return Pick.draw(pickLength, maxBallValue, randomSeed);
+    }
+
+    function changeTicketPrice(uint256 _newPrice) external onlyOwner {
+        require(_newPrice > 0, InvalidTicketPrice(_newPrice));
+        ticketPrice = _newPrice;
+        emit TicketPriceUpdated(_newPrice);
     }
 
     /// @notice Set the SVG renderer for tickets (privileged)
