@@ -25,6 +25,7 @@ interface ILootery is ITypeAndVersion, IERC721 {
         uint256 seedJackpotDelay;
         uint256 seedJackpotMinValue;
         address ticketSVGRenderer;
+				address ccipRouter;
     }
 
     /// @notice Current state of the lootery

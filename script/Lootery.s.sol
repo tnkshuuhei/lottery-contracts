@@ -20,6 +20,7 @@ contract DeployLootery is Script {
             52_583_392_386_139_978_788_287_834_954_922_830_646_012_130_925_743_222_032_793_193_524_782_781_572_502;
         bytes32 keyhash = 0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71;
         address usdc = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
+        address ccipRouter = 0xD3b06cEbF099CE7DA4AcCf578aaebFDBd6e88a93;
 
         // Create the init config struct
         ILootery.InitConfig memory config = ILootery.InitConfig({
@@ -36,13 +37,14 @@ contract DeployLootery is Script {
             prizeToken: usdc,
             seedJackpotDelay: 10 minutes,
             seedJackpotMinValue: 1 * 10 ** 6,
-            ticketSVGRenderer: ticketSVGRenderer
+            ticketSVGRenderer: ticketSVGRenderer,
+            ccipRouter: ccipRouter
         });
 
         // address proxy =
         //     Upgrades.deployTransparentProxy("Lootery.sol", admin, abi.encodeCall(Lootery.initialize, (config)));
 
-				Lootery lootery = new Lootery(config);
+        Lootery lootery = new Lootery(config);
         console.log("Deployed Lootery at", address(lootery));
         vm.stopBroadcast();
     }

@@ -15,6 +15,10 @@ import { IAnyrand } from "./interfaces/IAnyrand.sol";
 import { ITicketSVGRenderer } from "./interfaces/ITicketSVGRenderer.sol";
 import { RandomNumber } from "./ccip/RandomNumber.sol";
 import { IRandomNumber } from "./ccip/IRandomNumber.sol";
+import { CCIPReceiver } from "@chainlink/contracts-ccip/src/v0.8/ccip/applications/CCIPReceiver.sol";
+import { Client } from "@chainlink/contracts-ccip/src/v0.8/ccip/libraries/Client.sol";
+import { IRouterClient } from "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
+import { OwnerIsCreator } from "@chainlink/contracts-ccip/src/v0.8/shared/access/OwnerIsCreator.sol";
 
 /// @title Lootery
 /// @notice Lootery is a number lottery contract where players can pick a
@@ -41,7 +45,7 @@ import { IRandomNumber } from "./ccip/IRandomNumber.sol";
 ///
 ///     While the jackpot builds up over time, it is possible (and desirable)
 ///     to seed the jackpot at any time using the `seedJackpot` function.
-contract Lootery is ILootery, Ownable, ERC721, ReentrancyGuard {
+contract Lootery is ILootery, ERC721, ReentrancyGuard, CCIPReceiver, OwnerIsCreator {
     using SafeERC20 for IERC20;
     using Strings for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -121,7 +125,10 @@ contract Lootery is ILootery, Ownable, ERC721, ReentrancyGuard {
     // VRF mapping
     mapping(uint256 => RequestStatus) public s_requests; /* requestId --> requestStatus */
 
-    constructor(InitConfig memory initConfig) Ownable(initConfig.owner) ERC721(initConfig.name, initConfig.symbol) {
+    constructor(InitConfig memory initConfig)
+        ERC721(initConfig.name, initConfig.symbol)
+        CCIPReceiver(initConfig.ccipRouter)
+    {
         // deploy RandomNumber contract
         vrf = IRandomNumber(address(new RandomNumber(initConfig.subscriptionId, initConfig.keyHash, address(this))));
 
@@ -207,79 +214,6 @@ contract Lootery is ILootery, Ownable, ERC721, ReentrancyGuard {
         _;
     }
 
-    // /// @notice Initialisoooooooor
-    // function initialize(InitConfig memory initConfig) public initializer {
-    //     __Ownable_init(initConfig.owner);
-    //     __ERC721_init(initConfig.name, initConfig.symbol);
-    //     __ReentrancyGuard_init();
-
-    //     // deploy RandomNumber contract
-    //     vrf = IRandomNumber(address(new RandomNumber(initConfig.subscriptionId, initConfig.keyHash, address(this))));
-
-    //     require(initConfig.subscriptionId != 0, INVALID_SUBSCRIPTION_ID(initConfig.subscriptionId));
-    //     s_subscriptionId = initConfig.subscriptionId;
-
-    //     require(initConfig.keyHash.length != 0, INVALID_KEY_HASH(initConfig.keyHash));
-    //     keyHash = initConfig.keyHash;
-
-    //     // Pick length of 0 doesn't make sense, pick length > 32 would consume
-    //     // too much gas. Also realistically, lottos usually pick 5-8 numbers.
-    //     if (initConfig.pickLength == 0 || initConfig.pickLength > 32) {
-    //         revert InvalidPickLength(initConfig.pickLength);
-    //     }
-    //     pickLength = initConfig.pickLength;
-
-    //     // If pick length > max ball value, then it's impossible to even
-    //     // purchase tickets. This is a configuration error.
-    //     if (initConfig.pickLength > initConfig.maxBallValue) {
-    //         revert InvalidMaxBallValue(initConfig.maxBallValue);
-    //     }
-    //     maxBallValue = initConfig.maxBallValue;
-
-    //     if (initConfig.gamePeriod < 10 minutes) {
-    //         revert InvalidGamePeriod(initConfig.gamePeriod);
-    //     }
-    //     gamePeriod = initConfig.gamePeriod;
-
-    //     if (initConfig.ticketPrice == 0) {
-    //         revert InvalidTicketPrice(initConfig.ticketPrice);
-    //     }
-    //     ticketPrice = initConfig.ticketPrice;
-
-    //     // Community fee + protocol fee should not overflow 100%
-    //     // 0% jackpot fee share is allowed
-    //     if (initConfig.communityFeeBps + PROTOCOL_FEE_BPS > 1e4) {
-    //         revert InvalidFeeShares();
-    //     }
-    //     communityFeeBps = initConfig.communityFeeBps;
-
-    //     // if (initConfig.randomiser == address(0)) {
-    //     //     revert InvalidRandomiser(initConfig.randomiser);
-    //     // }
-    //     // randomiser = initConfig.randomiser;
-
-    //     if (initConfig.prizeToken == address(0)) {
-    //         revert InvalidPrizeToken(initConfig.prizeToken);
-    //     }
-    //     prizeToken = initConfig.prizeToken;
-
-    //     seedJackpotDelay = initConfig.seedJackpotDelay;
-    //     seedJackpotMinValue = initConfig.seedJackpotMinValue;
-    //     if (seedJackpotDelay == 0 || seedJackpotMinValue == 0) {
-    //         revert InvalidSeedJackpotConfig(seedJackpotDelay, seedJackpotMinValue);
-    //     }
-
-    //     _setTicketSVGRenderer(initConfig.ticketSVGRenderer);
-
-    //     currentGame.state = GameState.Purchase;
-    //     gameData[0] = Game({
-    //         ticketsSold: 0,
-    //         // The first game starts straight away
-    //         startedAt: uint64(block.timestamp),
-    //         winningPickId: 0
-    //     });
-    // }
-
     /// @notice Get all beneficiaries (shouldn't be such a huge list)
     function beneficiaries() external view returns (address[] memory addresses, string[] memory names) {
         addresses = _beneficiaries.values();
@@ -350,7 +284,7 @@ contract Lootery is ILootery, Ownable, ERC721, ReentrancyGuard {
 
     /// @notice Pick tickets and increase jackpot
     /// @param tickets Tickets!
-    function _pickTickets(Ticket[] calldata tickets) internal onlyInState(GameState.Purchase) {
+    function _pickTickets(Ticket[] memory tickets) internal onlyInState(GameState.Purchase) {
         CurrentGame memory currentGame_ = currentGame;
         uint256 currentGameId = currentGame_.id;
 
@@ -778,5 +712,78 @@ contract Lootery is ILootery, Ownable, ERC721, ReentrancyGuard {
         }
 
         return previousOwner;
+    }
+
+    // The chain selector of the destination chain.
+    // The address of the receiver on the destination chain.
+    // The borrower's EOA - would map to a depositor on the source chain.
+    // The token amount that was sent.
+    // The fees paid for sending the message.
+    event MessageSent( // The unique ID of the message.
+        bytes32 indexed messageId,
+        uint64 indexed destinationChainSelector,
+        address receiver,
+        address borrower,
+        Client.EVMTokenAmount tokenAmount,
+        uint256 fees
+    );
+
+    // Event emitted when a message is received from another chain.
+    event MessageReceived(
+        bytes32 indexed messageId,
+        uint64 indexed sourceChainSelector,
+        address sender,
+        Client.EVMTokenAmount tokenAmount,
+        bytes encodedTicket
+    );
+
+    // Struct to hold details of a message.
+    struct MessageIn {
+        uint64 sourceChainSelector; // The chain selector of the source chain.
+        address sender; // The address of the sender.
+        address token; // received token.
+        uint256 amount; // received amount.
+        bytes encodedTicket; // encoded ticket
+    }
+
+    // Storage variables.
+    bytes32[] public receivedMessages; // Array to keep track of the IDs of received messages.
+    mapping(bytes32 => MessageIn) public messageDetail; // Mapping from message ID to MessageIn struct, storing details
+        // of the message.
+
+    function _ccipReceive(Client.Any2EVMMessage memory any2EvmMessage) internal override {
+        bytes32 messageId = any2EvmMessage.messageId; // fetch the messageId
+        uint64 sourceChainSelector = any2EvmMessage.sourceChainSelector; // fetch the source chain identifier (aka
+            // selector)
+        address sender = abi.decode(any2EvmMessage.sender, (address)); // abi-decoding of the sender address
+        (bytes memory encodedTicket) = abi.decode(any2EvmMessage.data, (bytes)); // abi-decoding tuple
+
+        // abi-decoding of the encoded ticket
+        (Ticket[] memory tickets) = abi.decode(encodedTicket, (Ticket[]));
+
+        // Collect tokens transferred. This increases this contract's balance for that Token.
+        Client.EVMTokenAmount[] memory tokenAmounts = any2EvmMessage.destTokenAmounts;
+        address token = tokenAmounts[0].token;
+        uint256 amount = tokenAmounts[0].amount;
+
+        receivedMessages.push(messageId);
+        MessageIn memory detail = MessageIn(sourceChainSelector, sender, token, amount, encodedTicket);
+        messageDetail[messageId] = detail;
+
+        emit MessageReceived(messageId, sourceChainSelector, sender, tokenAmounts[0], encodedTicket);
+
+        // mint ticket
+        _pickTickets(tickets);
+    }
+
+    /// @notice Override supportsInterface to handle multiple inheritance
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC721, CCIPReceiver, IERC165)
+        returns (bool)
+    {
+        return ERC721.supportsInterface(interfaceId) || CCIPReceiver.supportsInterface(interfaceId);
     }
 }
