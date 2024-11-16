@@ -70,8 +70,6 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
     uint256 public seedJackpotMinValue;
     /// @notice Ticket SVG renderer
     address public ticketSVGRenderer;
-    /// @notice Callback gas limit
-    uint32 public callbackGasLimit;
 
     /// @dev Total supply of tokens/tickets, also used to determine next tokenId
     uint256 public totalSupply;
@@ -209,8 +207,6 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
         }
 
         _setTicketSVGRenderer(initConfig.ticketSVGRenderer);
-
-        callbackGasLimit = 100_000;
 
         currentGame.state = GameState.Purchase;
         gameData[0] = Game({
