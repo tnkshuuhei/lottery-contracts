@@ -15,6 +15,7 @@ import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { IAnyrand } from "./interfaces/IAnyrand.sol";
 import { ITicketSVGRenderer } from "./interfaces/ITicketSVGRenderer.sol";
 import { RandomNumber } from "./periphery/RandomNumber.sol";
+import { IRandomNumber } from "./interfaces/IRandomNumber.sol";
 
 /// @title Lootery
 /// @notice Lootery is a number lottery contract where players can pick a
@@ -87,7 +88,7 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
     uint256 public lastRequestId;
     bytes32 public keyHash;
 
-    RandomNumber public vrf;
+    IRandomNumber public vrf;
 
     modifier onlyVrfContract() {
         require(msg.sender == address(vrf), "Only VRF contract can call this function");
@@ -151,7 +152,7 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
         __ReentrancyGuard_init();
 
         // deploy RandomNumber contract
-        vrf = new RandomNumber(initConfig.subscriptionId, initConfig.keyHash, address(this));
+        vrf = IRandomNumber(address(new RandomNumber(initConfig.subscriptionId, initConfig.keyHash, address(this))));
 
         require(initConfig.subscriptionId != 0, INVALID_SUBSCRIPTION_ID(initConfig.subscriptionId));
         s_subscriptionId = initConfig.subscriptionId;
