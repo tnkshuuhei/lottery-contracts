@@ -44,7 +44,9 @@ interface ILooteryFactory is ITypeAndVersion {
         uint256 communityFeeBps,
         address prizeToken,
         uint256 seedJackpotDelay,
-        uint256 seedJackpotMinValue
+        uint256 seedJackpotMinValue,
+        uint256 subscriptionId,
+        bytes32 keyHash
     )
         external
         returns (address);

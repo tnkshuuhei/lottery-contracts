@@ -3,9 +3,9 @@ pragma solidity ^0.8.20;
 
 import { VRFConsumerBaseV2Plus } from "@chainlink/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import { VRFV2PlusClient } from "@chainlink/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
+import { ILootery } from "../interfaces/ILootery.sol";
 
 // BASE Sepolia testnet
-
 /**
  * Request testnet LINK and ETH here: https://faucets.chain.link/
  * Find information on LINK Token Contracts and get the latest ETH and LINK faucets here:
@@ -39,7 +39,7 @@ contract RandomNumber is VRFConsumerBaseV2Plus {
     // The gas lane to use, which specifies the maximum gas price to bump to.
     // For a list of available gas lanes on each network,
     // see https://docs.chain.link/vrf/v2-5/supported-networks
-    bytes32 public keyHash = 0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71;
+    bytes32 public keyHash;
 
     // Depends on the number of requested values that you want sent to the
     // fulfillRandomWords() function. Storing each word costs about 20,000 gas,
@@ -56,18 +56,29 @@ contract RandomNumber is VRFConsumerBaseV2Plus {
     // Cannot exceed VRFCoordinatorV2_5.MAX_NUM_WORDS.
     uint32 public numWords = 2;
 
+    ILootery public lottery;
+
     /**
      * HARDCODED FOR BASE SEPOLIA
      * COORDINATOR: 0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE
      */
-    constructor(uint256 subscriptionId) VRFConsumerBaseV2Plus(0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE) {
+    constructor(
+        uint256 subscriptionId,
+        bytes32 _keyHash,
+        address _lottery
+    )
+        VRFConsumerBaseV2Plus(0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE)
+    {
         s_subscriptionId = subscriptionId;
+        keyHash = _keyHash;
+        lottery = ILootery(_lottery);
+        // keyHash = 0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71;
     }
 
     // Assumes the subscription is funded sufficiently.
     // @param enableNativePayment: Set to `true` to enable payment in native tokens, or
     // `false` to pay in LINK
-    function requestRandomWords(bool enableNativePayment) external onlyOwner returns (uint256 requestId) {
+    function requestRandomWords(bool enableNativePayment) external returns (uint256 requestId) {
         // Will revert if subscription is not set and funded.
         requestId = s_vrfCoordinator.requestRandomWords(
             VRFV2PlusClient.RandomWordsRequest({
@@ -86,11 +97,14 @@ contract RandomNumber is VRFConsumerBaseV2Plus {
         return requestId;
     }
 
+    // This function is callbacked by the VRF Coordinator
     function fulfillRandomWords(uint256 _requestId, uint256[] calldata _randomWords) internal override {
         require(s_requests[_requestId].exists, "request not found");
         s_requests[_requestId].fulfilled = true;
         s_requests[_requestId].randomWords = _randomWords;
         emit RequestFulfilled(_requestId, _randomWords);
+        // call the lottery contract to fulfill the randomness, and finish the lottery
+        ILootery(lottery).receiveRandomWords(_randomWords);
     }
 
     function getRequestStatus(uint256 _requestId)

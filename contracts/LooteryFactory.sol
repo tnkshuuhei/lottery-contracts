@@ -128,7 +128,9 @@ contract LooteryFactory is ILooteryFactory, UUPSUpgradeable, AccessControlUpgrad
         uint256 communityFeeBps,
         address prizeToken,
         uint256 seedJackpotDelay,
-        uint256 seedJackpotMinValue
+        uint256 seedJackpotMinValue,
+        uint256 subscriptionId,
+        bytes32 keyHash
     )
         external
         returns (address)
@@ -142,7 +144,9 @@ contract LooteryFactory is ILooteryFactory, UUPSUpgradeable, AccessControlUpgrad
             gamePeriod: gamePeriod,
             ticketPrice: ticketPrice,
             communityFeeBps: communityFeeBps,
-            randomiser: RANDOMISER_SLOT.getAddressSlot().value,
+            // randomiser: RANDOMISER_SLOT.getAddressSlot().value,
+            subscriptionId: subscriptionId,
+            keyHash: keyHash,
             prizeToken: prizeToken,
             seedJackpotDelay: seedJackpotDelay,
             seedJackpotMinValue: seedJackpotMinValue,

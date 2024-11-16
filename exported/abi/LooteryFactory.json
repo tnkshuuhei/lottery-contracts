@@ -383,6 +383,16 @@
         "internalType": "uint256",
         "name": "seedJackpotMinValue",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "subscriptionId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "keyHash",
+        "type": "bytes32"
       }
     ],
     "name": "create",

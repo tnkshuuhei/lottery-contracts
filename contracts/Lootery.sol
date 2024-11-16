@@ -12,10 +12,12 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
-import { IRandomiserCallback } from "./interfaces/IRandomiserCallback.sol";
 import { IAnyrand } from "./interfaces/IAnyrand.sol";
 import { ITicketSVGRenderer } from "./interfaces/ITicketSVGRenderer.sol";
 import { ILooteryFactory } from "./interfaces/ILooteryFactory.sol";
+import { RandomNumber } from "./periphery/RandomNumber.sol";
+// import { VRFConsumerBaseV2Plus } from "@chainlink/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
+// import { VRFV2PlusClient } from "@chainlink/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
 /// @title Lootery
 /// @notice Lootery is a number lottery contract where players can pick a
@@ -59,8 +61,8 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
     uint8 public maxBallValue;
     /// @notice How long a game lasts in seconds (before numbers are drawn)
     uint256 public gamePeriod;
-    /// @notice Trusted randomiser
-    address public randomiser;
+    // /// @notice Trusted randomiser
+    // address public randomiser;
     /// @notice Token used for prizes
     address public prizeToken;
     /// @notice Ticket price
@@ -74,7 +76,7 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
     /// @notice Ticket SVG renderer
     address public ticketSVGRenderer;
     /// @notice Callback gas limit
-    uint256 public callbackGasLimit;
+    uint32 public callbackGasLimit;
 
     /// @dev Total supply of tokens/tickets, also used to determine next tokenId
     uint256 public totalSupply;
@@ -85,6 +87,22 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
     /// @notice Unclaimed jackpot payouts from previous game; will be rolled
     ///     over if not claimed in current game
     uint256 public unclaimedPayouts;
+
+    //----------- VRF variables -----------//
+    uint256 public s_subscriptionId;
+    uint256[] public requestIds;
+    uint256 public lastRequestId;
+    bytes32 public keyHash;
+    uint16 public requestConfirmations = 3;
+    uint32 public numWords = 2;
+
+    RandomNumber public vrf;
+
+    modifier onlyVrfContract() {
+        require(msg.sender == address(vrf), "Only VRF contract can call this function");
+        _;
+    }
+
     /// @notice Current random request details
     RandomnessRequest public randomnessRequest;
     /// @notice token id => purchased ticked details (gameId, pickId)
@@ -108,6 +126,9 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
     EnumerableSet.AddressSet private _beneficiaries;
     /// @notice Beneficiary display names for human readability
     mapping(address beneficiary => string name) public beneficiaryDisplayNames;
+
+    // VRF mapping
+    mapping(uint256 => RequestStatus) public s_requests; /* requestId --> requestStatus */
 
     constructor() {
         _disableInitializers();
@@ -136,6 +157,14 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
         __Ownable_init(initConfig.owner);
         __ERC721_init(initConfig.name, initConfig.symbol);
         __ReentrancyGuard_init();
+
+        // deploy RandomNumber contract
+        new RandomNumber(initConfig.subscriptionId, initConfig.keyHash, address(this));
+        require(initConfig.subscriptionId != 0, INVALID_SUBSCRIPTION_ID(initConfig.subscriptionId));
+        s_subscriptionId = initConfig.subscriptionId;
+
+        require(initConfig.keyHash.length != 0, INVALID_KEY_HASH(initConfig.keyHash));
+        keyHash = initConfig.keyHash;
 
         factory = msg.sender;
 
@@ -170,10 +199,10 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
         }
         communityFeeBps = initConfig.communityFeeBps;
 
-        if (initConfig.randomiser == address(0)) {
-            revert InvalidRandomiser(initConfig.randomiser);
-        }
-        randomiser = initConfig.randomiser;
+        // if (initConfig.randomiser == address(0)) {
+        //     revert InvalidRandomiser(initConfig.randomiser);
+        // }
+        // randomiser = initConfig.randomiser;
 
         if (initConfig.prizeToken == address(0)) {
             revert InvalidPrizeToken(initConfig.prizeToken);
@@ -188,7 +217,7 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
 
         _setTicketSVGRenderer(initConfig.ticketSVGRenderer);
 
-        callbackGasLimit = 500_000;
+        callbackGasLimit = 100_000;
 
         currentGame.state = GameState.Purchase;
         gameData[0] = Game({
@@ -362,9 +391,9 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
     }
 
     /// @notice Helper to get the request price for VRF call
-    function getRequestPrice() public view returns (uint256) {
-        return IAnyrand(randomiser).getRequestPrice(callbackGasLimit);
-    }
+    // function getRequestPrice() public view returns (uint256) {
+    //     return IAnyrand(randomiser).getRequestPrice(callbackGasLimit);
+    // }
 
     /// @notice Draw numbers, picking potential jackpot winners and ending the
     ///     current game. This should be automated by a keeper.
@@ -413,55 +442,59 @@ contract Lootery is Initializable, ILootery, OwnableUpgradeable, ERC721Upgradeab
     }
 
     /// @notice Request randomness from VRF
-    function _requestRandomness() internal {
+    function _requestRandomness() internal returns (uint256 requestId) {
         currentGame.state = GameState.DrawPending;
 
-        uint256 requestPrice = getRequestPrice();
-        if (msg.value > requestPrice) {
-            // Refund excess to caller, if any
-            uint256 excess = msg.value - requestPrice;
-            (bool success, bytes memory data) = msg.sender.call{ value: excess }("");
-            if (!success) {
-                revert TransferFailure(msg.sender, excess, data);
-            }
-            emit ExcessRefunded(msg.sender, excess);
-        }
-        if (address(this).balance < requestPrice) {
-            revert InsufficientOperationalFunds(address(this).balance, requestPrice);
-        }
+        // uint256 requestPrice = getRequestPrice();
+        // if (msg.value > requestPrice) {
+        //     // Refund excess to caller, if any
+        //     uint256 excess = msg.value - requestPrice;
+        //     (bool success, bytes memory data) = msg.sender.call{ value: excess }("");
+        //     if (!success) {
+        //         revert TransferFailure(msg.sender, excess, data);
+        //     }
+        //     emit ExcessRefunded(msg.sender, excess);
+        // }
+        // if (address(this).balance < requestPrice) {
+        //     revert InsufficientOperationalFunds(address(this).balance, requestPrice);
+        // }
+
         // VRF call to trusted coordinator
         // slither-disable-next-line reentrancy-eth,arbitrary-send-eth
-        uint256 requestId =
-            IAnyrand(randomiser).requestRandomness{ value: requestPrice }(block.timestamp + 30, callbackGasLimit);
+        requestId = vrf.requestRandomWords(false);
         if (requestId > type(uint208).max) {
             revert RequestIdOverflow(requestId);
         }
-        randomnessRequest = RandomnessRequest({ requestId: uint208(requestId), timestamp: uint48(block.timestamp) });
-        emit RandomnessRequested(uint208(requestId));
+        s_requests[requestId] = RequestStatus({ randomWords: new uint256[](0), exists: true, fulfilled: false });
+        requestIds.push(requestId);
+        lastRequestId = requestId;
+        emit RequestSent(requestId, numWords);
+        return requestId;
     }
 
     /// @notice Callback for VRF fulfiller.
-    ///     See {IRandomiserCallback-receiveRandomWords}
     function receiveRandomWords(
-        uint256 requestId,
-        uint256[] calldata randomWords
+        // uint256 _requestId,
+        uint256[] calldata _randomWords
     )
         external
+        onlyVrfContract
         onlyInState(GameState.DrawPending)
     {
-        if (msg.sender != randomiser) {
-            revert CallerNotRandomiser(msg.sender);
-        }
-        if (randomWords.length == 0) {
-            revert InsufficientRandomWords();
-        }
-        if (randomnessRequest.requestId != requestId) {
-            revert RequestIdMismatch(requestId, randomnessRequest.requestId);
-        }
-        randomnessRequest = RandomnessRequest({ requestId: 0, timestamp: 0 });
+        // if (msg.sender != randomiser) {
+        //     revert CallerNotRandomiser(msg.sender);
+        // }
+        // if (randomWords.length == 0) {
+        //     revert InsufficientRandomWords();
+        // }
+        // if (randomnessRequest.requestId != requestId) {
+        //     revert RequestIdMismatch(requestId, randomnessRequest.requestId);
+        // }
+        // randomnessRequest = RandomnessRequest({ requestId: 0, timestamp: 0 });
+        // Will revert if subscription is not set and funded.
 
         // Pick winning numbers
-        uint8[] memory balls = computeWinningPick(randomWords[0]);
+        uint8[] memory balls = computeWinningPick(_randomWords[0]);
         uint248 gameId = currentGame.id;
         emit GameFinalised(gameId, balls);
 

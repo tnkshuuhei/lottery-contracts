@@ -68,6 +68,8 @@ describe('Lootery e2e', () => {
             testERC20,
             3600, // 1 hour
             parseEther('1'),
+						1,
+						"0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71"
         )
 
         // Allow seeding jackpot
@@ -194,6 +196,8 @@ describe('Lootery e2e', () => {
             testERC20,
             3600, // 1 hour
             parseEther('1'),
+						1,
+						"0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71"
         )
 
         // Allow seeding jackpot

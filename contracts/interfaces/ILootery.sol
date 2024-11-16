@@ -3,12 +3,11 @@ pragma solidity ^0.8;
 
 import { ITypeAndVersion } from "./ITypeAndVersion.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import { IRandomiserCallback } from "./IRandomiserCallback.sol";
 
 /// @title ILootery
 /// @custom:version 1.3.0
 /// @notice Lootery contract interface
-interface ILootery is ITypeAndVersion, IRandomiserCallback, IERC721 {
+interface ILootery is ITypeAndVersion, IERC721 {
     /// @notice Initial configuration of Lootery
     struct InitConfig {
         address owner;
@@ -19,7 +18,9 @@ interface ILootery is ITypeAndVersion, IRandomiserCallback, IERC721 {
         uint256 gamePeriod;
         uint256 ticketPrice;
         uint256 communityFeeBps;
-        address randomiser;
+        // address randomiser;
+        uint256 subscriptionId;
+        bytes32 keyHash;
         address prizeToken;
         uint256 seedJackpotDelay;
         uint256 seedJackpotMinValue;
@@ -79,6 +80,13 @@ interface ILootery is ITypeAndVersion, IRandomiserCallback, IERC721 {
         uint48 timestamp;
     }
 
+    // VRF struct
+    struct RequestStatus {
+        bool fulfilled; // whether the request has been successfully fulfilled
+        bool exists; // whether a requestId exists
+        uint256[] randomWords;
+    }
+
     event TicketPurchased(uint256 indexed gameId, address indexed whomst, uint256 indexed tokenId, uint8[] pick);
     event BeneficiaryPaid(uint256 indexed gameId, address indexed beneficiary, uint256 value);
     event GameFinalised(uint256 gameId, uint8[] winningPick);
@@ -105,6 +113,10 @@ interface ILootery is ITypeAndVersion, IRandomiserCallback, IERC721 {
     event CallbackGasLimitSet(uint256 newCallbackGasLimit);
     event TicketSVGRendererSet(address indexed renderer);
     event ApocalypseModeActivated(uint256 indexed gameId);
+
+    // VRF events
+    event RequestSent(uint256 requestId, uint32 numWords);
+    event RequestFulfilled(uint256 requestId, uint256[] randomWords);
 
     error TransferFailure(address to, uint256 value, bytes reason);
     error InvalidPickLength(uint256 pickLength);
@@ -140,6 +152,12 @@ interface ILootery is ITypeAndVersion, IRandomiserCallback, IERC721 {
     error NoWin(uint256 pickId, uint256 winningPickId);
     error NoTicketsSold();
 
+    // VRF errors
+    error INVALID_KEY_HASH(bytes32 keyHash);
+    error INVALID_SUBSCRIPTION_ID(uint256 subscriptionId);
+
     /// @notice Initialises the contract instance
     function init(InitConfig memory initConfig) external;
+
+    function receiveRandomWords(uint256[] calldata _randomWords) external;
 }
