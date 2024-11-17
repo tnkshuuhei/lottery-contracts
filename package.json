@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "scripts": {
     "deploy:baseSp": "forge script script/Lootery.s.sol --rpc-url baseSp  --broadcast --private-key $DEPLOYER_PRIVATE_KEY --etherscan-api-key $API_KEY_BASESCAN --verify",
-    "upgrade:baseSp": "forge script script/Upgrade.s.sol --rpc-url baseSp  --broadcast --private-key $DEPLOYER_PRIVATE_KEY --etherscan-api-key $API_KEY_BASESCAN --verify",
+    "deploy:sepolia": "forge script script/Lootery.s.sol --rpc-url sepolia  --broadcast --private-key $DEPLOYER_PRIVATE_KEY --etherscan-api-key $API_KEY_ETHERSCAN --verify",
+		"deploy-sender:baseSp" : "forge script script/Sender.s.sol --rpc-url baseSp  --broadcast --private-key $DEPLOYER_PRIVATE_KEY --etherscan-api-key $API_KEY_BASESCAN --verify",
+		"deploy-sender:sepolia" : "forge script script/Sender.s.sol --rpc-url sepolia  --broadcast --private-key $DEPLOYER_PRIVATE_KEY --etherscan-api-key $API_KEY_ETHERSCAN --verify",
     "deploy:gnosis": "yarn hardhat --config hardhat.config.gnosis.ts --network gnosis run scripts/deploy.ts",
     "deploy:basetestnet": "yarn hardhat --config hardhat.config.base.ts --network baseSepolia run scripts/deploy.ts",
     "deploy:base": "yarn hardhat --config hardhat.config.base.ts --network base run scripts/deploy.ts",

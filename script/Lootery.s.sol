@@ -20,11 +20,11 @@ contract DeployLootery is Script {
     function configureChain() internal {
         if (block.chainid == 11_155_111) {
             ticketSVGRenderer = address(new TicketSVGRenderer());
-            subscriptionId = 0;
+            subscriptionId = 43496336248804612174642751826186552389683956767381157664797245801801686583677;
             keyhash = 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c;
             usdc = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238;
             ccipRouter = 0x0BF3dE8c5D3e8A2B34D2BEeB17ABfCeBaf363A59;
-        } else if (block.chainid == 11_155_111) {
+        } else if (block.chainid == 84532) {
             ticketSVGRenderer = address(new TicketSVGRenderer());
             subscriptionId =
                 52_583_392_386_139_978_788_287_834_954_922_830_646_012_130_925_743_222_032_793_193_524_782_781_572_502;

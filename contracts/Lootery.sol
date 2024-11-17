@@ -3,7 +3,7 @@ pragma solidity 0.8.27;
 
 import { ILootery } from "./interfaces/ILootery.sol";
 import { Pick } from "./lib/Pick.sol";
-import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -20,6 +20,7 @@ import { Client } from "@chainlink/contracts-ccip/src/v0.8/ccip/libraries/Client
 import { IRouterClient } from "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
 import { OwnerIsCreator } from "@chainlink/contracts-ccip/src/v0.8/shared/access/OwnerIsCreator.sol";
 import { IReciever } from "./ccip/IReciever.sol";
+import { Ticket } from "./periphery/Ticket.sol";
 
 /// @title Lootery
 /// @notice Lootery is a number lottery contract where players can pick a
@@ -46,7 +47,7 @@ import { IReciever } from "./ccip/IReciever.sol";
 ///
 ///     While the jackpot builds up over time, it is possible (and desirable)
 ///     to seed the jackpot at any time using the `seedJackpot` function.
-contract Lootery is ILootery, ERC721, ReentrancyGuard, CCIPReceiver, OwnerIsCreator, IReciever {
+contract Lootery is ILootery, ReentrancyGuard, CCIPReceiver, OwnerIsCreator, IReciever {
     using SafeERC20 for IERC20;
     using Strings for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -77,7 +78,7 @@ contract Lootery is ILootery, ERC721, ReentrancyGuard, CCIPReceiver, OwnerIsCrea
     address public ticketSVGRenderer;
 
     /// @dev Total supply of tokens/tickets, also used to determine next tokenId
-    uint256 public totalSupply;
+
     /// @notice Current state of the game
     CurrentGame public currentGame;
     /// @notice Running jackpot
@@ -94,10 +95,14 @@ contract Lootery is ILootery, ERC721, ReentrancyGuard, CCIPReceiver, OwnerIsCrea
 
     IRandomNumber public vrf;
 
+		IERC721 public ticket;
+
     modifier onlyVrfContract() {
         require(msg.sender == address(vrf), "Only VRF contract can call this function");
         _;
     }
+
+   
 
     /// @notice Current random request details
     RandomnessRequest public randomnessRequest;
@@ -127,9 +132,12 @@ contract Lootery is ILootery, ERC721, ReentrancyGuard, CCIPReceiver, OwnerIsCrea
     mapping(uint256 => RequestStatus) public s_requests; /* requestId --> requestStatus */
 
     constructor(InitConfig memory initConfig)
-        ERC721(initConfig.name, initConfig.symbol)
+        
         CCIPReceiver(initConfig.ccipRouter)
     {
+				
+				ticket = IERC721(address(new Ticket(initConfig.name, initConfig.symbol)));
+
         // deploy RandomNumber contract
         vrf = IRandomNumber(address(new RandomNumber(initConfig.subscriptionId, initConfig.keyHash, address(this))));
 
@@ -329,7 +337,7 @@ contract Lootery is ILootery, ERC721, ReentrancyGuard, CCIPReceiver, OwnerIsCrea
         // Finally, mint NFTs
         for (uint256 t; t < ticketsCount; ++t) {
             address whomst = tickets[t].whomst;
-            _safeMint(whomst, startingTokenId + t); // NB: Increases totalSupply
+            ticket.safeMint(whomst, startingTokenId + t); // NB: Increases totalSupply
         }
     }
 
@@ -555,22 +563,22 @@ contract Lootery is ILootery, ERC721, ReentrancyGuard, CCIPReceiver, OwnerIsCrea
             revert UnexpectedState(currentGame.state);
         }
 
-        address whomst = _ownerOf(tokenId);
+        address whomst = ticket.ownerOf(tokenId);
         if (whomst == address(0)) {
-            revert ERC721NonexistentToken(tokenId);
+            revert IERC721.ERC721NonexistentToken(tokenId);
         }
 
-        PurchasedTicket memory ticket = purchasedTickets[tokenId];
+        PurchasedTicket memory purchasedTicket = purchasedTickets[tokenId];
         uint256 currentGameId = currentGame.id;
         // Can only claim winnings from the last game
-        if (ticket.gameId != currentGameId - 1) {
+        if (purchasedTicket.gameId != currentGameId - 1) {
             revert ClaimWindowMissed(tokenId);
         }
 
         // Determine if the jackpot was won
-        Game memory game = gameData[ticket.gameId];
+        Game memory game = gameData[purchasedTicket.gameId];
         uint256 winningPickId = game.winningPickId;
-        uint256 numWinners = numWinnersInGame(ticket.gameId, winningPickId);
+        uint256 numWinners = numWinnersInGame(purchasedTicket.gameId, winningPickId);
 
         if (numWinners == 0 && currentGame.state == GameState.Dead) {
             // No jackpot winners, and game is no longer active!
@@ -580,11 +588,11 @@ contract Lootery is ILootery, ERC721, ReentrancyGuard, CCIPReceiver, OwnerIsCrea
             // Decrease unclaimed payouts by the amount just claimed
             unclaimedPayouts -= prizeShare;
             // Burning the token is our "consolation prize claim nullifier"
-            _burn(tokenId); // NB: decreases totalSupply
+            ticket.burn(tokenId); // NB: decreases totalSupply
             // Transfer share of jackpot to ticket holder
             IERC20(prizeToken).safeTransfer(whomst, prizeShare);
-            emit ConsolationClaimed(tokenId, ticket.gameId, whomst, prizeShare);
-        } else if (winningPickId == ticket.pickId) {
+            emit ConsolationClaimed(tokenId, purchasedTicket.gameId, whomst, prizeShare);
+        } else if (winningPickId == purchasedTicket.pickId) {
             assert(numWinners > 0);
             // This ticket did have the winning numbers; just check it hasn't
             // been used to claim a prize already
@@ -592,19 +600,19 @@ contract Lootery is ILootery, ERC721, ReentrancyGuard, CCIPReceiver, OwnerIsCrea
                 revert AlreadyClaimed(tokenId);
             }
             // OK - compute the prize share to transfer
-            uint256 numClaimedWinningTickets_ = numClaimedWinningTickets[ticket.gameId];
+            uint256 numClaimedWinningTickets_ = numClaimedWinningTickets[purchasedTicket.gameId];
             prizeShare = unclaimedPayouts / (numWinners - numClaimedWinningTickets_);
             // Decrease unclaimed payouts by the amount just claimed
             unclaimedPayouts -= prizeShare;
             // Record that this ticket has claimed its winnings, but don't burn
             isWinningsClaimed[tokenId] = true;
-            numClaimedWinningTickets[ticket.gameId] += 1;
+            numClaimedWinningTickets[purchasedTicket.gameId] += 1;
             // Transfer share of jackpot to ticket holder
             IERC20(prizeToken).safeTransfer(whomst, prizeShare);
 
-            emit WinningsClaimed(tokenId, ticket.gameId, whomst, prizeShare);
+            emit WinningsClaimed(tokenId, purchasedTicket.gameId, whomst, prizeShare);
         } else {
-            revert NoWin(ticket.pickId, winningPickId);
+            revert NoWin(purchasedTicket.pickId, winningPickId);
         }
     }
 
@@ -670,18 +678,23 @@ contract Lootery is ILootery, ERC721, ReentrancyGuard, CCIPReceiver, OwnerIsCrea
 
     /// @notice Set the SVG renderer for tickets (privileged)
     /// @param renderer Address of renderer contract
-    function _setTicketSVGRenderer(address renderer) internal {
-        bool isValidRenderer = IERC165(renderer).supportsInterface(type(ITicketSVGRenderer).interfaceId);
-        if (!isValidRenderer) {
+    function _setTicketSVGRenderer(address renderer) internal view {
+        if (renderer == address(0)) {
             revert InvalidTicketSVGRenderer(renderer);
         }
-        ticketSVGRenderer = renderer;
-        emit TicketSVGRendererSet(renderer);
-    }
 
+        try IERC165(renderer).supportsInterface(type(ITicketSVGRenderer).interfaceId) returns (bool isSupported) {
+            if (!isSupported) {
+                revert InvalidTicketSVGRenderer(renderer);
+            }
+        } catch {
+            revert InvalidTicketSVGRenderer(renderer);
+        }
+    }
     /// @notice Set the SVG renderer for tickets
     /// @param renderer Address of renderer contract
-    function setTicketSVGRenderer(address renderer) external onlyOwner {
+
+    function setTicketSVGRenderer(address renderer) external view onlyOwner {
         _setTicketSVGRenderer(renderer);
     }
 
@@ -693,27 +706,6 @@ contract Lootery is ILootery, ERC721, ReentrancyGuard, CCIPReceiver, OwnerIsCrea
         return currentGame.state != GameState.Dead;
     }
 
-    /// @notice See {ERC721-tokenURI}
-    function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        _requireOwned(tokenId);
-        return ITicketSVGRenderer(ticketSVGRenderer).renderTokenURI(
-            name(), tokenId, maxBallValue, Pick.parse(pickLength, purchasedTickets[tokenId].pickId)
-        );
-    }
-
-    /// @notice Overrides {ERC721-_update} to track totalSupply
-    function _update(address to, uint256 tokenId, address auth) internal virtual override returns (address) {
-        address previousOwner = super._update(to, tokenId, auth);
-
-        if (previousOwner == address(0)) {
-            totalSupply += 1;
-        }
-        if (to == address(0)) {
-            totalSupply -= 1;
-        }
-
-        return previousOwner;
-    }
 
     // Storage variables.
     bytes32[] public receivedMessages; // Array to keep track of the IDs of received messages.
@@ -745,16 +737,5 @@ contract Lootery is ILootery, ERC721, ReentrancyGuard, CCIPReceiver, OwnerIsCrea
 
         // mint ticket
         _pickTickets(tickets);
-    }
-
-    /// @notice Override supportsInterface to handle multiple inheritance
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override(ERC721, CCIPReceiver, IERC165)
-        returns (bool)
-    {
-        return ERC721.supportsInterface(interfaceId) || CCIPReceiver.supportsInterface(interfaceId);
     }
 }
